@@ -18,7 +18,8 @@ var _ messageHandler = &testMessageHandler{}
 var _ worker = &testMessageHandler{}
 
 func (mh *testMessageHandler) onMessage(m message) {
-	mh.msgs <- mh.acknowledgeMessage(m)
+	mh.acknowledgeMessage(m)
+	mh.msgs <- m
 }
 
 func (mh *testMessageHandler) onStop() {
@@ -26,19 +27,21 @@ func (mh *testMessageHandler) onStop() {
 }
 
 func (mh *testMessageHandler) send(m message) {
-	mh.msgs <- mh.acknowledgeMessage(m)
+	mh.acknowledgeMessage(m)
+	mh.msgs <- m
 }
 
-func (mh *testMessageHandler) acknowledgeMessage(m message) message {
+func (mh *testMessageHandler) acknowledgeMessage(m message) {
 	fmt.Println("testMessageHandler acknowledgeMessage", m)
 	if mh.response == CompletedResponse {
 		fmt.Println("Sending Completed signal for", m)
+		fmt.Printf("Signal handler: %v\n", m.signal)
 		outputs.SignalCompleted(m.signal)
 	} else {
 		fmt.Println("Sending Failed signal for", m)
+		fmt.Printf("Signal handler: %v\n", m.signal)
 		outputs.SignalFailed(m.signal)
 	}
-	return m
 }
 
 // Waits for n messages to be received and then returns. If n messages are not

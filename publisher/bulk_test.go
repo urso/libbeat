@@ -10,23 +10,20 @@ import (
 // Start and stop the bulkWorker.
 func TestBulkWorkerStartStop(t *testing.T) {
 	tw := &testMessageHandler{msgs: make(chan message, 10)}
-	ws := &workerSignal{}
-	ws.Init()
-	bw := newBulkWorker(ws, 10, tw, 500*time.Millisecond, 10)
-	bw.ws.stop()
-	bw.ws.wg.Wait()
+	ws := newWorkerSignal()
+	defer ws.stop()
+	_ = newBulkWorker(ws, 10, tw, 500*time.Millisecond, 10)
 }
 
-// fatal error: stack overflow
-// github.com/elastic/libbeat/outputs.(*CompositeSignal).Completed(0xc20801e5a0)
-//     github.com/elastic/libbeat/outputs/signal.go:83
 func TestBulkWorkerSend(t *testing.T) {
-	t.SkipNow()
+	t.Skip()
+
 	mh := &testMessageHandler{
 		response: CompletedResponse,
-		msgs:     make(chan message, 10)}
-	ws := &workerSignal{}
-	ws.Init()
+		msgs:     make(chan message, 10),
+	}
+	ws := newWorkerSignal()
+	defer ws.stop()
 	bw := newBulkWorker(ws, 10, mh, 500*time.Millisecond, 10)
 
 	s := &testSignaler{}

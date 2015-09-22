@@ -10,14 +10,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Fails with nil pointer dereference in:
-// github.com/elastic/libbeat/outputs.(*CompositeSignal).Completed(0x0)
-//    github.com/elastic/libbeat/outputs/signal.go:88
 func TestAsyncPublishEvent(t *testing.T) {
+	// init
 	testPub := newTestPublisherNoBulk(CompletedResponse)
 	event := testEvent()
+
+	// execute
 	// Async PublishEvent always immediately returns true.
-	assert.True(t, testPub.pub.asyncPublisher.client().PublishEvent(event))
+	ok := testPub.pub.asyncPublisher.client().PublishEvent(event)
+	assert.True(t, ok)
+
+	// validate
 	msgs, err := testPub.outputMsgHandler.waitForMessages(1)
 	if err != nil {
 		t.Fatal(err)
@@ -26,9 +29,16 @@ func TestAsyncPublishEvent(t *testing.T) {
 }
 
 func TestAsyncPublishEvents(t *testing.T) {
+	// init
 	testPub := newTestPublisherNoBulk(CompletedResponse)
 	events := []common.MapStr{testEvent(), testEvent()}
-	testPub.pub.asyncPublisher.client().PublishEvents(events)
+
+	// execute
+	// Async PublishEvent always immediately returns true.
+	ok := testPub.pub.asyncPublisher.client().PublishEvents(events)
+	assert.True(t, ok)
+
+	// validate
 	msgs, err := testPub.outputMsgHandler.waitForMessages(1)
 	if err != nil {
 		t.Fatal(err)
@@ -37,27 +47,38 @@ func TestAsyncPublishEvents(t *testing.T) {
 	assert.Equal(t, events[1], msgs[0].events[1])
 }
 
-// Fails with nil pointer dereference in:
-// github.com/elastic/libbeat/outputs.(*CompositeSignal).Completed(0x0)
-//    github.com/elastic/libbeat/outputs/signal.go:88
 func TestBulkAsyncPublishEvent(t *testing.T) {
 	t.SkipNow()
+
+	// init
 	testPub := newTestPublisherWithBulk(CompletedResponse)
 	event := testEvent()
+
 	// Async PublishEvent always immediately returns true.
-	assert.True(t, testPub.pub.asyncPublisher.client().PublishEvent(event))
+	ok := testPub.pub.asyncPublisher.client().PublishEvent(event)
+	assert.True(t, ok)
+
+	// validate
 	msgs, err := testPub.outputMsgHandler.waitForMessages(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, event, msgs[0].event)
+	// Bulk outputer always sends bulk messages (even if only one event is
+	// present)
+	assert.Equal(t, event, msgs[0].events[0])
 }
 
 func TestBulkAsyncPublishEvents(t *testing.T) {
 	t.SkipNow()
+
+	// init
 	testPub := newTestPublisherWithBulk(CompletedResponse)
 	events := []common.MapStr{testEvent(), testEvent()}
-	testPub.pub.asyncPublisher.client().PublishEvents(events)
+
+	// Async PublishEvent always immediately returns true.
+	ok := testPub.pub.asyncPublisher.client().PublishEvents(events)
+	assert.True(t, ok)
+
 	msgs, err := testPub.outputMsgHandler.waitForMessages(1)
 	if err != nil {
 		t.Fatal(err)
