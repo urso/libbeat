@@ -15,23 +15,30 @@ type testMessageHandler struct {
 }
 
 var _ messageHandler = &testMessageHandler{}
+var _ worker = &testMessageHandler{}
 
 func (mh *testMessageHandler) onMessage(m message) {
-	fmt.Println("output onMessage ", m)
-	if mh.response {
-		fmt.Println("Sending Completed signal")
-		outputs.SignalCompleted(m.signal)
-	} else {
-		fmt.Println("pre Sending failed signal")
-		outputs.SignalFailed(m.signal)
-		fmt.Println("Sending failed signal")
-	}
-
-	mh.msgs <- m
+	mh.msgs <- mh.acknowledgeMessage(m)
 }
 
 func (mh *testMessageHandler) onStop() {
 	mh.stopped = true
+}
+
+func (mh *testMessageHandler) send(m message) {
+	mh.msgs <- mh.acknowledgeMessage(m)
+}
+
+func (mh *testMessageHandler) acknowledgeMessage(m message) message {
+	fmt.Println("testMessageHandler acknowledgeMessage", m)
+	if mh.response == CompletedResponse {
+		fmt.Println("Sending Completed signal for", m)
+		outputs.SignalCompleted(m.signal)
+	} else {
+		fmt.Println("Sending Failed signal for", m)
+		outputs.SignalFailed(m.signal)
+	}
+	return m
 }
 
 // Waits for n messages to be received and then returns. If n messages are not
