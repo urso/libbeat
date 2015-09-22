@@ -53,7 +53,7 @@ func (b *bulkWorker) run() {
 		case <-b.ws.done:
 			return
 		case m := <-b.queue:
-			fmt.Printf("received message: %v", m)
+			fmt.Printf("received message: %v\n", m)
 
 			if m.event != nil { // single event
 				b.onEvent(m.signal, m.event)
@@ -111,7 +111,7 @@ func (b *bulkWorker) onEvents(signal outputs.Signaler, events []common.MapStr) {
 }
 
 func (b *bulkWorker) publish() {
-	b.send(message{
+	b.output.send(message{
 		signal: outputs.NewCompositeSignaler(b.pending...),
 		events: b.events,
 	})
