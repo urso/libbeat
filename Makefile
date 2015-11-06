@@ -2,10 +2,17 @@
 
 ### VARIABLE SETUP ###
 
-GODEP=$(GOPATH)/bin/godep
+GLIDE=GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/glide
+GO=GO15VENDOREXPERIMENT=1 go
+GOGET=go get
+GOFMT=gofmt
+GOTESTCOVER=GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gotestcover
+
+MODULES=$$($(GLIDE) novendor)
+
 # Hidden directory to install dependencies for jenkins
 export PATH := ./bin:$(PATH)
-GOFILES = $(shell find . -type f -name '*.go')
+GOFILES = $(shell find . -type f -name '*.go' -not -path './vendor/*')
 SHELL=/bin/bash
 ES_HOST?="elasticsearch-200"
 BUILD_DIR=build
@@ -18,40 +25,45 @@ TIMEOUT?= 90
 
 # Builds libbeat. No binary created as it is a library
 .PHONY: build
-build: deps
-	$(GODEP) go build ./...
+build: vendortool deps
+	$(GO) build $(MODULES)
 
 # Create test coverage binary
 .PHONY: libbeat.test
 libbeat.test: $(GOFILES)
-	$(GODEP) go test -c -covermode=count -coverpkg ./...
+	$(GO) test -c -covermode=count -coverpkg ./...
 
 # Cross-compile libbeat for the OS and architectures listed in
 # crosscompile.bash. The binaries are placed in the ./bin dir.
 .PHONY: crosscompile
-crosscompile: $(GOFILES)
-	go get github.com/tools/godep
+crosscompile: vendortool $(GOFILES)
 	mkdir -p ${BUILD_DIR}/bin
 	source scripts/crosscompile.bash; OUT='${BUILD_DIR}/bin' go-build-all
 
+.PHONY: vendortool
+vendortool:
+	# first make sure we have glide
+	$(GOGET) github.com/Masterminds/glide
+
+
 # Fetch dependencies
-.PHONY: deps
-deps:
-	go get github.com/tools/godep
-	# TODO: Is this still needed?
-	go get -t ./...
+deps: vendor
+
+vendor: glide.yaml
+	# install dependencies
+	$(GLIDE) install
 
 # Checks project and source code if everything is according to standard
 .PHONY: check
 check:
 	# This should be modified so it throws an error on the build system in case the output is not empty
-	gofmt -d .
-	godep go vet ./...
+	$(GOFMT) -d $(GOFILES)
+	$(GO) vet $(MODULES)
 
 # Cleans up directory and source code with gofmt
 .PHONY: clean
 clean:
-	go fmt ./...
+	$(GOFMT) $(GOFILES)
 	-rm -r build
 	-rm libbeat.test
 
@@ -72,20 +84,20 @@ ci:
 prepare-tests:
 	mkdir -p ${COVERAGE_DIR}
 	# coverage tools
-	go get golang.org/x/tools/cmd/cover
+	$(GOGET) golang.org/x/tools/cmd/cover
 	# gotestcover is needed to fetch coverage for multiple packages
-	go get github.com/pierrre/gotestcover
+	$(GOGET) github.com/pierrre/gotestcover
 
 # Runs the unit tests
 .PHONY: unit-tests
 unit-tests: prepare-tests
 	#go test -short ./...
-	GOPATH=$(shell $(GODEP) path):$(GOPATH) $(GOPATH)/bin/gotestcover -coverprofile=${COVERAGE_DIR}/unit.cov -short -covermode=count github.com/elastic/libbeat/...
+	$(GOTESTCOVER) -coverprofile=${COVERAGE_DIR}/unit.cov -short -covermode=count $(MODULES)
 
 # Run integration tests. Unit tests are run as part of the integration tests
 .PHONY: integration-tests
 integration-tests: prepare-tests
-	GOPATH=$(shell $(GODEP) path):$(GOPATH) $(GOPATH)/bin/gotestcover -coverprofile=${COVERAGE_DIR}/integration.cov -covermode=count github.com/elastic/libbeat/...
+	$(GOTESTCOVER) -coverprofile=${COVERAGE_DIR}/integration.cov -covermode=count $(MODULES)
 
 # Runs the integration inside a virtual environment. This can be run on any docker-machine (local, remote)
 .PHONY: integration-tests-environment
@@ -121,7 +133,7 @@ system-tests-setup: tests/system/requirements.txt
 .PHONY: benchmark-tests
 benchmark-tests:
 	# No benchmark tests exist so far
-	#go test -short -bench=. ./...
+	#$(GO) test -short -bench=. $(MODULES)
 
 # Runs all tests and generates the coverage reports
 .PHONY: testsuite
@@ -140,7 +152,7 @@ coverage-report:
 	echo 'mode: count' > ./${COVERAGE_DIR}/full.cov
 	# Collects all coverage files and skips top line with mode
 	tail -q -n +2 ./${COVERAGE_DIR}/*.cov >> ./${COVERAGE_DIR}/full.cov
-	$(GODEP) go tool cover -html=./${COVERAGE_DIR}/full.cov -o ${COVERAGE_DIR}/full.html
+	$(GO) tool cover -html=./${COVERAGE_DIR}/full.cov -o ${COVERAGE_DIR}/full.html
 
 
 

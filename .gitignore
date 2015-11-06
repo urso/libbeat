@@ -17,6 +17,7 @@ _output
 /docs/html_docs
 .vagrant
 build
+vendor/
 
 # Architecture specific extensions/prefixes
 *.[568vq]

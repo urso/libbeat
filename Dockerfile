@@ -13,7 +13,7 @@ RUN set -x \
 	github.com/pierrre/gotestcover \
 	github.com/tools/godep \
 	github.com/tsg/goautotest \
-	golang.org/x/tools/cmd/cover \
+  github.com/Masterminds/glide \
 	golang.org/x/tools/cmd/vet
 
 COPY scripts/docker-entrypoint.sh /entrypoint.sh
