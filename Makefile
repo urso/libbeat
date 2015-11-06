@@ -28,11 +28,6 @@ TIMEOUT?= 90
 build: vendortool deps
 	$(GO) build $(MODULES)
 
-# Create test coverage binary
-.PHONY: libbeat.test
-libbeat.test: $(GOFILES)
-	$(GO) test -c -covermode=count -coverpkg ./...
-
 # Cross-compile libbeat for the OS and architectures listed in
 # crosscompile.bash. The binaries are placed in the ./bin dir.
 .PHONY: crosscompile
@@ -65,7 +60,6 @@ check:
 clean:
 	$(GOFMT) $(GOFILES)
 	-rm -r build
-	-rm libbeat.test
 
 # Shortcut for continuous integration
 # This should always run before merging.
